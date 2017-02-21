@@ -2,10 +2,12 @@ package fr.xtof54.webjscript;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.view.View;
+import android.widget.Toast;
 import java.io.PrintWriter;
 import java.io.FileWriter;
 import java.io.File;
@@ -13,6 +15,8 @@ import java.io.File;
 public class WebJscript extends Activity
 {
     WebView wv;
+    Handler handlerForJavascriptInterface = new Handler();
+    String htmlcontent="rien";
 
     /** Called when the activity is first created. */
     @Override
@@ -24,36 +28,34 @@ public class WebJscript extends Activity
 		wv.setWebViewClient(new myWebViewClient());
 		wv.getSettings().setSupportZoom(true);
 		wv.getSettings().setJavaScriptEnabled(true);
-        initwebview();
+        wv.addJavascriptInterface(new MyJavaScriptInterface(this), "HtmlViewer");
+
+
         final Button button = (Button)findViewById(R.id.b1);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                wv.loadUrl("javascript:document.body.innerHTML='MMMMMMMMMM';");
+                showInputs();
             }
         });
     }
-    private void initwebview() {
-        try {
-            File ff= new File(getFilesDir()+"/tt.html");
-            System.out.println("OOOOOOOOOO "+ff.getAbsolutePath());
-            PrintWriter f = new PrintWriter(new FileWriter(ff));
-            f.println("<html>");
-            f.println("<script>");
-            f.println("function t() {document.body.innerHTML='KKKKKLLLLL';}");
-            f.println("</script>");
-            f.println("<body onload='t();'>");
-            f.println("AOKOKOK");
-            f.println("</body>");
-            f.println("</html>");
-            f.close();
-            wv.loadUrl("file:///"+ff.getAbsolutePath());
-        } catch (Exception e) {e.printStackTrace();}
+	void showMessage(final String txt) {
+		this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				Toast.makeText(getBaseContext(), txt, Toast.LENGTH_LONG).show();
+			}
+		});
+	}
+
+    private void showInputs() {
+        showMessage(htmlcontent);
     }
 	private class myWebViewClient extends WebViewClient {
 		@Override
 		public void onPageFinished(final WebView view, String url) {
-		    System.out.println("page finished loading");
+            webview.loadUrl("javascript:window.HtmlViewer.showHTML" +
+                "('&lt;html&gt;'+document.getElementsByTagName('html')[0].innerHTML+'&lt;/html&gt;');");
 		}
 		
 		@Override
@@ -68,4 +70,22 @@ public class WebJscript extends Activity
 			}
 		}
 	}
+    private class MyJavaScriptInterface {
+        private Context ctx;
+
+        MyJavaScriptInterface(Context ctx) {
+            this.ctx = ctx;
+        }
+
+        @JavascriptInterface
+        public void showHTML(String html) {
+            final String html_ = html;
+            //code to use html content here
+            handlerForJavascriptInterface.post(new Runnable() {
+                @Override
+                public void run() {
+                    htmlcontent = ""+html_;
+            }});
+        }
+    }
 }
